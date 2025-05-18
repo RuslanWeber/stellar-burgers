@@ -4,6 +4,12 @@
 }
 .number {
   text-align: center;
+  font-family: 'Iceland';
+  font-weight: normal;
+  font-size: 28px;
+  line-height: 0.86;
+  margin-top: 40px;
+  margin-bottom: 0;
 }
 
 .status {
