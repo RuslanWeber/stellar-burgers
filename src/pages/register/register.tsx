@@ -3,14 +3,14 @@ import { RegisterUI } from '@ui-pages';
 import { useSelector, useDispatch } from '../../services/store';
 import { useNavigate } from 'react-router-dom';
 import {
-  clearErrors,
-  errorSelector,
-  registerUserThunk
+  resetError,
+  selectErrorMessage,
+  registerNewUser
 } from '../../services/slices/userSlice';
 
 export const Register: FC = () => {
   const dispatch = useDispatch();
-  const error = useSelector(errorSelector);
+  const error = useSelector(selectErrorMessage);
 
   const [userName, setUserName] = useState('');
   const [email, setEmail] = useState('');
@@ -19,7 +19,7 @@ export const Register: FC = () => {
   const handleSubmit = (e: SyntheticEvent) => {
     e.preventDefault();
     dispatch(
-      registerUserThunk({
+      registerNewUser({
         name: userName,
         email,
         password
@@ -28,8 +28,8 @@ export const Register: FC = () => {
   };
 
   useEffect(() => {
-    dispatch(clearErrors());
-  }, []);
+    dispatch(resetError());
+  }, [dispatch]);
 
   return (
     <RegisterUI

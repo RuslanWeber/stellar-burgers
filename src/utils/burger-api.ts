@@ -57,17 +57,17 @@ export const fetchWithRefresh = async <T>(
   }
 };
 
-export type TIngredientsResponse = TServerResponse<{
+type TIngredientsResponse = TServerResponse<{
   data: TIngredient[];
 }>;
 
-export type TFeedsResponse = TServerResponse<{
+type TFeedsResponse = TServerResponse<{
   orders: TOrder[];
   total: number;
   totalToday: number;
 }>;
 
-export type TOrdersResponse = TServerResponse<{
+type TOrdersResponse = TServerResponse<{
   data: TOrder[];
 }>;
 
@@ -99,7 +99,7 @@ export const getOrdersApi = () =>
     return Promise.reject(data);
   });
 
-export type TNewOrderResponse = TServerResponse<{
+type TNewOrderResponse = TServerResponse<{
   order: TOrder;
   name: string;
 }>;
@@ -119,7 +119,7 @@ export const orderBurgerApi = (data: string[]) =>
     return Promise.reject(data);
   });
 
-export type TOrderResponse = TServerResponse<{
+type TOrderResponse = TServerResponse<{
   orders: TOrder[];
 }>;
 
@@ -137,7 +137,7 @@ export type TRegisterData = {
   password: string;
 };
 
-export type TAuthResponse = TServerResponse<{
+type TAuthResponse = TServerResponse<{
   refreshToken: string;
   accessToken: string;
   user: TUser;
@@ -204,7 +204,7 @@ export const resetPasswordApi = (data: { password: string; token: string }) =>
       return Promise.reject(data);
     });
 
-export type TUserResponse = TServerResponse<{ user: TUser }>;
+type TUserResponse = TServerResponse<{ user: TUser }>;
 
 export const getUserApi = () =>
   fetchWithRefresh<TUserResponse>(`${URL}/auth/user`, {

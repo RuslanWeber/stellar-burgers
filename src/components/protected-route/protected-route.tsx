@@ -2,38 +2,47 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useSelector } from '../../services/store';
 import { Preloader } from '../ui/preloader';
 import {
-  isUserAuthenticatedSelector,
-  isLoginUserRequestSelector
+  selectIsAuthenticated,
+  selectIsLoading
 } from '../../services/slices/userSlice';
+import React from 'react';
 
 type ProtectedRouteProps = {
   onlyUnAuth?: boolean;
-  children: React.ReactElement;
+  component?: React.ReactElement;
+  children?: React.ReactElement;
 };
 
-export const ProtectedRoute = ({
-  onlyUnAuth,
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  onlyUnAuth = false,
+  component,
   children
-}: ProtectedRouteProps) => {
-  const isAuthChecked = useSelector(isUserAuthenticatedSelector);
-  const loginUserRequest = useSelector(isLoginUserRequestSelector);
+}) => {
+  const isAuthenticated = useSelector(selectIsAuthenticated);
+  const isLoading = useSelector(selectIsLoading);
   const location = useLocation();
+  const currentPath = location.pathname;
 
-  /** Пока загружается информация о пользователя  */
-  if (!isAuthChecked && loginUserRequest) {
+  if (!component && !children) {
+    throw new Error(
+      'ProtectedRoute requires either component or children prop'
+    );
+  }
+
+  if (isLoading) {
     return <Preloader />;
   }
 
-  /** Если нужна авторизация */
-  if (!onlyUnAuth && !isAuthChecked) {
-    return <Navigate replace to='/login' state={{ from: location }} />;
+  if (onlyUnAuth && isAuthenticated) {
+    const redirectTo = location.state?.from?.pathname || '/';
+    return <Navigate to={redirectTo} replace state={{ from: currentPath }} />;
   }
 
-  /** Если авторизованы */
-  if (onlyUnAuth && isAuthChecked) {
-    const from = location.state?.from || { pathname: '/' };
-    return <Navigate replace to={from} />;
+  if (!onlyUnAuth && !isAuthenticated) {
+    return <Navigate to='/login' replace state={{ from: currentPath }} />;
   }
 
-  return children;
+  return component || children!;
 };
+
+ProtectedRoute.displayName = 'ProtectedRoute';

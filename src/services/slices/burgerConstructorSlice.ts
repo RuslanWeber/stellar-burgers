@@ -1,74 +1,121 @@
-import { PayloadAction, createSlice, nanoid } from '@reduxjs/toolkit';
-import { TConstructorIngredient, TIngredient } from '@utils-types';
+import { createSlice, nanoid, PayloadAction } from '@reduxjs/toolkit';
+import { TIngredient, TConstructorIngredient } from '@utils-types';
 
-export interface burgerConstructorState {
-  burgerConstructor: {
+export interface BurgerConstructorState {
+  ingredients: {
     bun: TConstructorIngredient | null;
-    ingredients: TConstructorIngredient[];
+    fillings: TConstructorIngredient[];
   };
   error: string | null;
+  lastUpdated: number | null;
 }
 
-const initialState: burgerConstructorState = {
-  burgerConstructor: {
+const initialState: BurgerConstructorState = {
+  ingredients: {
     bun: null,
-    ingredients: []
+    fillings: []
   },
-  error: null
+  error: null,
+  lastUpdated: null
+};
+
+const fillingsHelpers = {
+  moveItem: (
+    fillings: TConstructorIngredient[],
+    fromIndex: number,
+    toIndex: number
+  ) => {
+    if (
+      fromIndex < 0 ||
+      fromIndex >= fillings.length ||
+      toIndex < 0 ||
+      toIndex >= fillings.length
+    ) {
+      return fillings;
+    }
+
+    const newFillings = [...fillings];
+    const [movedItem] = newFillings.splice(fromIndex, 1);
+    newFillings.splice(toIndex, 0, movedItem);
+    return newFillings;
+  }
 };
 
 const burgerConstructorSlice = createSlice({
   name: 'burgerConstructor',
   initialState,
   selectors: {
-    burgerConstructorSelector: (state) => state.burgerConstructor
+    selectConstructorState: (state) => state,
+    selectConstructorData: (state) => state.ingredients, // Добавлен обратно
+    selectBun: (state) => state.ingredients.bun,
+    selectFillings: (state) => state.ingredients.fillings,
+    selectTotalPrice: (state) => {
+      const bunPrice = state.ingredients.bun?.price || 0;
+      const fillingsPrice = state.ingredients.fillings.reduce(
+        (sum, item) => sum + item.price,
+        0
+      );
+      return bunPrice * 2 + fillingsPrice;
+    }
   },
   reducers: {
     addIngredient: {
       reducer: (state, action: PayloadAction<TConstructorIngredient>) => {
-        if (action.payload.type === 'bun') {
-          state.burgerConstructor.bun = action.payload;
+        const ingredient = action.payload;
+        if (ingredient.type === 'bun') {
+          state.ingredients.bun = ingredient;
         } else {
-          state.burgerConstructor.ingredients.push(action.payload);
+          state.ingredients.fillings.push(ingredient);
         }
+        state.lastUpdated = Date.now();
       },
-      prepare: (ingredient: TIngredient) => {
-        const id = nanoid();
-        return { payload: { ...ingredient, id } };
-      }
+      prepare: (ingredient: TIngredient) => ({
+        payload: { ...ingredient, id: nanoid() }
+      })
     },
-    moveUpIngredient: (state, action: PayloadAction<number>) => {
-      const array = state.burgerConstructor.ingredients;
-      const index = action.payload;
-      array.splice(index - 1, 0, array.splice(index, 1)[0]);
-    },
-    moveDownIngredient: (state, action: PayloadAction<number>) => {
-      const array = state.burgerConstructor.ingredients;
-      const index = action.payload;
-      array.splice(index + 1, 0, array.splice(index, 1)[0]);
-    },
-    removeIngredient: (
+    moveIngredient: (
       state,
-      action: PayloadAction<TConstructorIngredient>
+      action: PayloadAction<{ fromIndex: number; toIndex: number }>
     ) => {
-      state.burgerConstructor.ingredients =
-        state.burgerConstructor.ingredients.filter(
-          (ingredient) => ingredient.id !== action.payload.id
-        );
+      const { fromIndex, toIndex } = action.payload;
+      state.ingredients.fillings = fillingsHelpers.moveItem(
+        state.ingredients.fillings,
+        fromIndex,
+        toIndex
+      );
+      state.lastUpdated = Date.now();
     },
-    clearConstructor: (state) => {
-      state.burgerConstructor.bun = null;
-      state.burgerConstructor.ingredients = [];
+    removeIngredient: (state, action: PayloadAction<string>) => {
+      state.ingredients.fillings = state.ingredients.fillings.filter(
+        (item) => item.id !== action.payload
+      );
+      state.lastUpdated = Date.now();
+    },
+    resetConstructor: (state) => {
+      state.ingredients.bun = null;
+      state.ingredients.fillings = [];
+      state.lastUpdated = Date.now();
+    },
+    setError: (state, action: PayloadAction<string | null>) => {
+      state.error = action.payload;
     }
   }
 });
 
-export const { burgerConstructorSelector } = burgerConstructorSlice.selectors;
+export const {
+  selectConstructorState,
+  selectConstructorData,
+  selectBun,
+  selectFillings,
+  selectTotalPrice
+} = burgerConstructorSlice.selectors;
+
 export const {
   addIngredient,
-  moveUpIngredient,
-  moveDownIngredient,
+  moveIngredient,
   removeIngredient,
-  clearConstructor
+  resetConstructor,
+  setError
 } = burgerConstructorSlice.actions;
+
 export default burgerConstructorSlice.reducer;

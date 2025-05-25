@@ -3,17 +3,17 @@ import { TOrder } from '@utils-types';
 import { FC, useEffect } from 'react';
 import { useDispatch, useSelector } from '../../services/store';
 import {
-  getOrdersThunk,
-  userOrdersSelector
+  loadUserOrders,
+  selectUserOrders
 } from '../../services/slices/userSlice';
 
 export const ProfileOrders: FC = () => {
   const dispatch = useDispatch();
-  const orders: TOrder[] = useSelector(userOrdersSelector);
+  const orders: TOrder[] = useSelector(selectUserOrders);
 
   useEffect(() => {
-    dispatch(getOrdersThunk());
-  }, []);
+    dispatch(loadUserOrders());
+  }, [dispatch]);
 
   return <ProfileOrdersUI orders={orders} />;
 };

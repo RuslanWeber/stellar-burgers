@@ -31,7 +31,6 @@
   background-color: rgba(0, 0, 0, 0);
   margin-left: auto;
   padding: 0;
-  z-index: 1000;
 }
 
 .img {
@@ -42,13 +41,4 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-}
-
-.modal h2 {
-  text-align: left;
-  margin-top: -40px;
-}
-
-.modal .h4 {
-  display: none;
 }

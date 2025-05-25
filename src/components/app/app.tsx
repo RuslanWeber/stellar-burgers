@@ -24,8 +24,8 @@ import {
 } from '@pages';
 
 import { useDispatch } from '../../services/store';
-import { getIngredientsThunk } from '../../services/slices/ingredientsSlice';
-import { getUserThunk } from '../../services/slices/userSlice';
+import { fetchIngredients } from '../../services/slices/ingedientsSlice';
+import { fetchUserProfile } from '../../services/slices/userSlice';
 
 const App = () => {
   const dispatch = useDispatch();
@@ -34,8 +34,8 @@ const App = () => {
   const background = location.state?.background;
 
   useEffect(() => {
-    dispatch(getIngredientsThunk());
-    dispatch(getUserThunk());
+    dispatch(fetchIngredients());
+    dispatch(fetchUserProfile());
   }, []);
 
   return (

@@ -8,188 +8,208 @@ import {
   registerUserApi,
   updateUserApi
 } from '@api';
-import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+import {
+  createAsyncThunk,
+  createSlice,
+  isAnyOf,
+  PayloadAction
+} from '@reduxjs/toolkit';
 import { TOrder, TUser } from '../../utils/types';
 import { deleteCookie, setCookie } from '../../utils/cookie';
 
-/** Авторизация пользователя по логину и пароля */
-export const loginUserThunk = createAsyncThunk(
-  'users/loginUser',
-  async (data: TLoginData) =>
-    loginUserApi(data).then((data) => {
-      setCookie('accessToken', data.accessToken);
-      localStorage.setItem('refreshToken', data.refreshToken);
-      return data.user;
-    })
-);
+const authFlowWrapper = async <T>(authFn: () => Promise<T>) => {
+  const response = await authFn();
+  return response;
+};
 
-/** Разлогин/выход пользователя */
-export const logoutUserThunk = createAsyncThunk('users/logoutUser', async () =>
-  logoutApi().then(() => {
+const tokenManager = {
+  setTokens: (accessToken: string, refreshToken: string) => {
+    setCookie('accessToken', accessToken);
+    localStorage.setItem('refreshToken', refreshToken);
+  },
+  clearTokens: () => {
     deleteCookie('accessToken');
     localStorage.removeItem('refreshToken');
-  })
+  }
+};
+
+export const authorizeUser = createAsyncThunk(
+  'user/authFlow',
+  async (credentials: TLoginData) => {
+    const response = await authFlowWrapper(() => loginUserApi(credentials));
+    tokenManager.setTokens(response.accessToken, response.refreshToken);
+    return response.user;
+  }
 );
 
-/** Загрузка данных пользователя */
-export const getUserThunk = createAsyncThunk('users/getUser', async () =>
-  getUserApi()
+export const signOutUser = createAsyncThunk('user/cleanSession', async () => {
+  await authFlowWrapper(logoutApi);
+  tokenManager.clearTokens();
+});
+
+export const fetchUserProfile = createAsyncThunk(
+  'user/loadProfile',
+  async () => {
+    const response = await authFlowWrapper(getUserApi);
+    return response;
+  }
 );
 
-/** Регистрация пользователя */
-export const registerUserThunk = createAsyncThunk(
-  'users/registerUser',
-  async (data: TRegisterData) =>
-    registerUserApi(data).then((data) => {
-      setCookie('accessToken', data.accessToken);
-      localStorage.setItem('refreshToken', data.refreshToken);
-      return data.user;
-    })
+export const registerNewUser = createAsyncThunk(
+  'user/createAccount',
+  async (formData: TRegisterData) => {
+    const response = await authFlowWrapper(() => registerUserApi(formData));
+    tokenManager.setTokens(response.accessToken, response.refreshToken);
+    return response.user;
+  }
 );
 
-/** Обновление данных пользователя */
-export const updateUserThunk = createAsyncThunk(
-  'users/updateUser',
-  async (data: Partial<TRegisterData>) => updateUserApi(data)
+export const updateUserProfile = createAsyncThunk(
+  'user/patchProfile',
+  async (updates: Partial<TRegisterData>) => {
+    const response = await authFlowWrapper(() => updateUserApi(updates));
+    return response;
+  }
 );
 
-/** Получение истории заказов пользователя */
-export const getOrdersThunk = createAsyncThunk(
-  'users/getUserOrders',
-  async () => getOrdersApi()
+export const loadUserOrders = createAsyncThunk(
+  'user/getOrderHistory',
+  async () => {
+    const orders = await authFlowWrapper(getOrdersApi);
+    return orders;
+  }
 );
 
-export interface UserState {
-  isUserAuthenticated: boolean;
-  isLoginUserRequest: boolean;
+interface UserState {
+  isAuthenticated: boolean;
+  isLoading: boolean;
   user: TUser | null;
   orders: TOrder[];
-  isOrdersRequest: boolean;
-  error: string | null;
+  isFetchingOrders: boolean;
+  errorMessage: string | null;
+  lastAction: string | null;
 }
 
 const initialState: UserState = {
-  isUserAuthenticated: false,
-  isLoginUserRequest: false,
+  isAuthenticated: false,
+  isLoading: false,
   user: null,
   orders: [],
-  isOrdersRequest: false,
-  error: null
+  isFetchingOrders: false,
+  errorMessage: null,
+  lastAction: null
 };
 
 const userSlice = createSlice({
   name: 'user',
   initialState,
-  selectors: {
-    isUserAuthenticatedSelector: (state) => state.isUserAuthenticated,
-    isLoginUserRequestSelector: (state) => state.isLoginUserRequest,
-    userNameSelector: (state) => state.user?.name || '',
-    userEmailSelector: (state) => state.user?.email || '',
-    userSelector: (state) => state.user,
-
-    userOrdersSelector: (state) => state.orders,
-    isOrdersRequestSelector: (state) => state.isOrdersRequest,
-
-    errorSelector: (state) => state.error
-  },
   reducers: {
-    clearErrors: (state) => {
-      state.error = null;
+    resetError: (state) => {
+      state.errorMessage = null;
+    },
+    trackAction: (state, action: PayloadAction<string>) => {
+      state.lastAction = action.payload;
     }
   },
-  extraReducers(builder) {
+  extraReducers: (builder) => {
     builder
-      .addCase(loginUserThunk.pending, (state) => {
-        state.isLoginUserRequest = true;
-        state.error = null;
-      })
-      .addCase(loginUserThunk.rejected, (state, action) => {
-        state.isLoginUserRequest = false;
-        state.error = action.error.message!;
-      })
-      .addCase(loginUserThunk.fulfilled, (state, action) => {
+      .addCase(authorizeUser.fulfilled, (state, action) => {
         state.user = action.payload;
-        state.isLoginUserRequest = false;
-        state.isUserAuthenticated = true;
-      });
-
-    builder.addCase(logoutUserThunk.pending, (state) => {
-      state.user = null;
-      state.isLoginUserRequest = false;
-      state.isUserAuthenticated = false;
-    });
-
-    builder
-      .addCase(getUserThunk.pending, (state) => {
-        state.isLoginUserRequest = true;
+        state.isAuthenticated = true;
+        state.isLoading = false;
+        state.errorMessage = null;
+        state.lastAction = 'authSuccess';
       })
-      .addCase(getUserThunk.rejected, (state, action) => {
+      .addCase(registerNewUser.fulfilled, (state, action) => {
+        state.user = action.payload;
+        state.isAuthenticated = true;
+        state.isLoading = false;
+        state.errorMessage = null;
+        state.lastAction = 'authSuccess';
+      })
+      .addCase(fetchUserProfile.fulfilled, (state, action) => {
+        state.user = action.payload.user;
+        state.isAuthenticated = true;
+        state.isLoading = false;
+        state.lastAction = 'profileLoaded';
+      })
+      .addCase(signOutUser.pending, (state) => {
         state.user = null;
-        state.isLoginUserRequest = false;
-        state.error = action.error.message!;
+        state.isAuthenticated = false;
+        state.isLoading = false;
+        state.lastAction = 'signOut';
       })
-      .addCase(getUserThunk.fulfilled, (state, action) => {
+      .addCase(updateUserProfile.fulfilled, (state, action) => {
         state.user = action.payload.user;
-        state.isLoginUserRequest = false;
-        state.isUserAuthenticated = true;
-      });
-
-    builder
-      .addCase(registerUserThunk.pending, (state) => {
-        state.isUserAuthenticated = false;
-        state.isLoginUserRequest = true;
+        state.isLoading = false;
+        state.lastAction = 'profileUpdated';
       })
-      .addCase(registerUserThunk.rejected, (state, action) => {
-        state.isUserAuthenticated = false;
-        state.isLoginUserRequest = false;
-        state.error = action.error.message!;
-      })
-      .addCase(registerUserThunk.fulfilled, (state, action) => {
-        state.user = action.payload;
-        state.isLoginUserRequest = false;
-        state.isUserAuthenticated = true;
-      });
-
-    builder
-      .addCase(updateUserThunk.pending, (state) => {
-        state.isLoginUserRequest = true;
-      })
-      .addCase(updateUserThunk.rejected, (state, action) => {
-        state.isLoginUserRequest = false;
-        state.error = action.error.message!;
-      })
-      .addCase(updateUserThunk.fulfilled, (state, action) => {
-        state.user = action.payload.user;
-        state.isLoginUserRequest = false;
-        state.isUserAuthenticated = true;
-      });
-
-    builder
-      .addCase(getOrdersThunk.pending, (state) => {
-        state.isOrdersRequest = true;
-      })
-      .addCase(getOrdersThunk.rejected, (state, action) => {
-        state.error = action.error.message!;
-        state.isOrdersRequest = false;
-      })
-      .addCase(getOrdersThunk.fulfilled, (state, action) => {
+      .addCase(loadUserOrders.fulfilled, (state, action) => {
         state.orders = action.payload;
-        state.isOrdersRequest = false;
+        state.isFetchingOrders = false;
+        state.lastAction = 'ordersLoaded';
+      })
+      .addCase(loadUserOrders.pending, (state) => {
+        state.isFetchingOrders = true;
+        state.errorMessage = null;
+      })
+      .addCase(loadUserOrders.rejected, (state, action) => {
+        state.isFetchingOrders = false;
+        state.errorMessage = action.error.message ?? 'Order load failed';
+        state.lastAction = 'ordersLoadFailed';
       });
+
+    builder
+      .addMatcher(
+        isAnyOf(
+          authorizeUser.pending,
+          registerNewUser.pending,
+          fetchUserProfile.pending,
+          updateUserProfile.pending
+        ),
+        (state) => {
+          state.isLoading = true;
+          state.errorMessage = null;
+        }
+      )
+      .addMatcher(
+        isAnyOf(
+          authorizeUser.rejected,
+          registerNewUser.rejected,
+          fetchUserProfile.rejected,
+          updateUserProfile.rejected
+        ),
+        (state, action) => {
+          state.isLoading = false;
+          state.errorMessage = action.error.message ?? 'Operation failed';
+          state.lastAction = 'actionFailed';
+        }
+      );
+  },
+  selectors: {
+    selectIsAuthenticated: (state) => state.isAuthenticated,
+    selectIsLoading: (state) => state.isLoading,
+    selectUserName: (state) => state.user?.name ?? '',
+    selectUserEmail: (state) => state.user?.email ?? '',
+    selectUserData: (state) => state.user,
+    selectUserOrders: (state) => state.orders,
+    selectIsFetchingOrders: (state) => state.isFetchingOrders,
+    selectErrorMessage: (state) => state.errorMessage,
+    selectLastAction: (state) => state.lastAction
   }
 });
 
-export const { clearErrors } = userSlice.actions;
+export const { resetError, trackAction } = userSlice.actions;
 export const {
-  isUserAuthenticatedSelector,
-  userNameSelector,
-  userEmailSelector,
-  userSelector,
-  isLoginUserRequestSelector,
-
-  userOrdersSelector,
-  isOrdersRequestSelector,
-
-  errorSelector
+  selectIsAuthenticated,
+  selectUserName,
+  selectUserEmail,
+  selectUserData,
+  selectIsLoading,
+  selectUserOrders,
+  selectIsFetchingOrders,
+  selectErrorMessage,
+  selectLastAction
 } = userSlice.selectors;
+
 export default userSlice.reducer;
