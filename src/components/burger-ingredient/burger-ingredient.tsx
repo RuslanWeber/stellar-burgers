@@ -2,7 +2,7 @@ import { FC, memo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useDispatch } from '../../services/store';
 
-import { BurgerIngredientUI } from '../ui/burger-ingredient'; // убедись, что путь к UI правильный
+import { BurgerIngredientUI } from '../ui/burger-ingredient';
 import { TBurgerIngredientProps } from './type';
 import { addIngredient } from '../../services/slices/burgerConstructorSlice';
 

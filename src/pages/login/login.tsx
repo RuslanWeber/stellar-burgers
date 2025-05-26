@@ -4,19 +4,15 @@ import { useDispatch, useSelector } from '../../services/store';
 import {
   authorizeUser,
   resetError,
-  selectErrorMessage,
-  selectIsAuthenticated
+  selectErrorMessage
 } from '../../services/slices/userSlice';
-import { Navigate, useNavigate } from 'react-router-dom';
 
 export const Login: FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const isAuthenticated = useSelector(selectIsAuthenticated);
 
   const dispatch = useDispatch();
   const error = useSelector(selectErrorMessage);
-  const navigate = useNavigate();
 
   const handleSubmit = (e: SyntheticEvent) => {
     e.preventDefault();
@@ -27,10 +23,6 @@ export const Login: FC = () => {
     // Сброс ошибки при монтировании компонента
     dispatch(resetError());
   }, [dispatch]);
-
-  if (isAuthenticated) {
-    return <Navigate to='/' />;
-  }
 
   return (
     <LoginUI

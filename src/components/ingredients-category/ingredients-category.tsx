@@ -1,5 +1,5 @@
 import { forwardRef, useMemo } from 'react';
-import { useSelector } from '../../services/store'; // путь к useSelector зависит от структуры проекта
+import { useSelector } from '../../services/store';
 import {
   selectBun,
   selectFillings

@@ -1,5 +1,5 @@
 import { FC, memo } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch } from '../../services/store';
 import { BurgerConstructorElementUI } from '@ui';
 import { BurgerConstructorElementProps } from './type';
 import {

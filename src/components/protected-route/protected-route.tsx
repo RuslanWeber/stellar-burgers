@@ -3,46 +3,45 @@ import { useSelector } from '../../services/store';
 import { Preloader } from '../ui/preloader';
 import {
   selectIsAuthenticated,
+  selectUserData,
   selectIsLoading
 } from '../../services/slices/userSlice';
 import React from 'react';
 
 type ProtectedRouteProps = {
   onlyUnAuth?: boolean;
-  component?: React.ReactElement;
-  children?: React.ReactElement;
+  children: React.ReactElement;
 };
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   onlyUnAuth = false,
-  component,
   children
 }) => {
-  const isAuthenticated = useSelector(selectIsAuthenticated);
+  const isAuthChecked = useSelector(selectIsAuthenticated);
+  const user = useSelector(selectUserData);
   const isLoading = useSelector(selectIsLoading);
   const location = useLocation();
-  const currentPath = location.pathname;
 
-  if (!component && !children) {
-    throw new Error(
-      'ProtectedRoute requires either component or children prop'
-    );
-  }
+  const isInitialAuthCheck = isAuthChecked === false && isLoading;
+  const isUserDataLoading = isAuthChecked && !user && isLoading;
 
-  if (isLoading) {
+  const from = location.state?.from?.pathname || '/';
+
+  if (isInitialAuthCheck || isUserDataLoading) {
     return <Preloader />;
   }
 
-  if (onlyUnAuth && isAuthenticated) {
-    const redirectTo = location.state?.from?.pathname || '/';
-    return <Navigate to={redirectTo} replace state={{ from: currentPath }} />;
+  // для неавторизованных
+  if (onlyUnAuth && user) {
+    return <Navigate to={from} replace />;
   }
 
-  if (!onlyUnAuth && !isAuthenticated) {
-    return <Navigate to='/login' replace state={{ from: currentPath }} />;
+  // для авторизованных
+  if (!onlyUnAuth && !user) {
+    return <Navigate to='/login' replace state={{ from: location }} />;
   }
 
-  return component || children!;
+  return children;
 };
 
 ProtectedRoute.displayName = 'ProtectedRoute';
