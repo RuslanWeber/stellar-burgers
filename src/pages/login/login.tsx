@@ -20,7 +20,6 @@ export const Login: FC = () => {
   };
 
   useEffect(() => {
-    // Сброс ошибки при монтировании компонента
     dispatch(resetError());
   }, [dispatch]);
 

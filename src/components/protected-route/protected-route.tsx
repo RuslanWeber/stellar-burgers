@@ -17,28 +17,22 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   onlyUnAuth = false,
   children
 }) => {
-  const isAuthChecked = useSelector(selectIsAuthenticated);
-  const user = useSelector(selectUserData);
+  const isAuthenticated = useSelector(selectIsAuthenticated);
   const isLoading = useSelector(selectIsLoading);
+  const user = useSelector(selectUserData);
   const location = useLocation();
 
-  const isInitialAuthCheck = isAuthChecked === false && isLoading;
-  const isUserDataLoading = isAuthChecked && !user && isLoading;
-
-  const from = location.state?.from?.pathname || '/';
-
-  if (isInitialAuthCheck || isUserDataLoading) {
+  if (isLoading && !user) {
     return <Preloader />;
   }
 
-  // для неавторизованных
-  if (onlyUnAuth && user) {
-    return <Navigate to={from} replace />;
+  if (onlyUnAuth && isAuthenticated) {
+    const from = location.state?.from || { pathname: '/' };
+    return <Navigate replace to={from} />;
   }
 
-  // для авторизованных
-  if (!onlyUnAuth && !user) {
-    return <Navigate to='/login' replace state={{ from: location }} />;
+  if (!isAuthenticated && !onlyUnAuth) {
+    return <Navigate replace to='/login' state={{ from: location }} />;
   }
 
   return children;
