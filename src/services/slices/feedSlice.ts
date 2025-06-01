@@ -13,7 +13,7 @@ interface FeedState {
   lastUpdated: string | null; // Добавлено новое поле без изменения существующих
 }
 
-const initialState: FeedState = {
+export const initialState: FeedState = {
   orders: [],
   isFeedLoading: false,
   selectedOrder: null,

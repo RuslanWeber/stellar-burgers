@@ -8,7 +8,7 @@ export interface OrderState {
   errorMessage: string | null;
 }
 
-const initialState: OrderState = {
+export const initialState: OrderState = {
   currentOrder: null,
   isSubmitting: false,
   errorMessage: null
