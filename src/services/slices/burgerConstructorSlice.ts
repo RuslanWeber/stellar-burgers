@@ -10,7 +10,7 @@ export interface BurgerConstructorState {
   lastUpdated: number | null;
 }
 
-const initialState: BurgerConstructorState = {
+export const initialState: BurgerConstructorState = {
   ingredients: {
     bun: null,
     fillings: []
